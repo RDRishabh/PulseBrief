@@ -70,15 +70,26 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
   const [logsError, setLogsError] = useState<string | null>(null);
 
   // Synchronize state with initial props when revalidated
-  useEffect(() => {
+  const [prevInitialUsers, setPrevInitialUsers] = useState<User[]>(initialUsers);
+  if (initialUsers !== prevInitialUsers) {
+    setPrevInitialUsers(initialUsers);
     setAllUsers(initialUsers);
-  }, [initialUsers]);
+  }
+
+  // Intercept selectedUserId changes during render to reset loading/error states
+  const [prevSelectedUserId, setPrevSelectedUserId] = useState<string | null>(null);
+  if (selectedUserId !== prevSelectedUserId) {
+    setPrevSelectedUserId(selectedUserId);
+    if (selectedUserId) {
+      setLogsLoading(true);
+      setLogsError(null);
+      setLogs([]);
+    }
+  }
 
   // Fetch delivery history when a user details view is opened
   useEffect(() => {
     if (selectedUserId) {
-      setLogsLoading(true);
-      setLogsError(null);
       getUserDeliveryLogs(selectedUserId)
         .then((res) => {
           if (res.error) {
@@ -151,9 +162,15 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
   const paginatedUsers = sortedUsers.slice(offset, offset + ITEMS_PER_PAGE);
 
   // Reset page when search or filters change
-  useEffect(() => {
+  const [prevSearch, setPrevSearch] = useState(search);
+  const [prevStatusFilter, setPrevStatusFilter] = useState(statusFilter);
+  const [prevSortOrder, setPrevSortOrder] = useState(sortOrder);
+  if (search !== prevSearch || statusFilter !== prevStatusFilter || sortOrder !== prevSortOrder) {
+    setPrevSearch(search);
+    setPrevStatusFilter(statusFilter);
+    setPrevSortOrder(sortOrder);
     setCurrentPage(1);
-  }, [search, statusFilter, sortOrder]);
+  }
 
   const selectedUser = allUsers.find((u) => u.id === selectedUserId);
 
@@ -262,7 +279,7 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
                 <div className="flex h-40 flex-col items-center justify-center gap-2 text-center border border-dashed border-border rounded-lg p-6">
                   <MessageSquare className="h-8 w-8 text-muted-foreground" />
                   <p className="text-sm font-medium">No history found</p>
-                  <p className="text-xs text-muted-foreground">This subscriber hasn't received any briefings yet.</p>
+                  <p className="text-xs text-muted-foreground">This subscriber hasn&apos;t received any briefings yet.</p>
                 </div>
               ) : (
                 <div className="relative max-h-[50vh] overflow-y-auto pr-2">

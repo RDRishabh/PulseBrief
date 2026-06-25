@@ -55,9 +55,11 @@ export function QuotesTable({ initialQuotes }: QuotesTableProps) {
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
 
   // Synchronize state with initial props when revalidated
-  useEffect(() => {
+  const [prevInitialQuotes, setPrevInitialQuotes] = useState<Quote[]>(initialQuotes);
+  if (initialQuotes !== prevInitialQuotes) {
+    setPrevInitialQuotes(initialQuotes);
     setAllQuotes(initialQuotes);
-  }, [initialQuotes]);
+  }
 
   async function handleDelete(id: string) {
     if (!confirm("Delete this quote?")) return;
@@ -103,9 +105,15 @@ export function QuotesTable({ initialQuotes }: QuotesTableProps) {
   const paginatedQuotes = sortedQuotes.slice(offset, offset + ITEMS_PER_PAGE);
 
   // Reset page when filters change
-  useEffect(() => {
+  const [prevSearch, setPrevSearch] = useState(search);
+  const [prevCategoryFilter, setPrevCategoryFilter] = useState(categoryFilter);
+  const [prevSortOrder, setPrevSortOrder] = useState(sortOrder);
+  if (search !== prevSearch || categoryFilter !== prevCategoryFilter || sortOrder !== prevSortOrder) {
+    setPrevSearch(search);
+    setPrevCategoryFilter(categoryFilter);
+    setPrevSortOrder(sortOrder);
     setCurrentPage(1);
-  }, [search, categoryFilter, sortOrder]);
+  }
 
   const selectedQuote = allQuotes.find((q) => q.id === selectedQuoteId);
 
@@ -159,7 +167,7 @@ export function QuotesTable({ initialQuotes }: QuotesTableProps) {
             <div className="space-y-1">
               <span className="text-xs text-muted-foreground uppercase font-semibold">Quote Text</span>
               <p className="text-base font-medium italic border-l-2 border-primary/50 pl-3 py-1 bg-muted/20 rounded">
-                "{selectedQuote.text}"
+                &ldquo;{selectedQuote.text}&rdquo;
               </p>
             </div>
             <div className="space-y-1">

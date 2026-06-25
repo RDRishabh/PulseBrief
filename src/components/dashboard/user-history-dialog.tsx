@@ -34,10 +34,21 @@ export function UserHistoryDialog({ open, onOpenChange, userId, userName }: User
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const [prevOpen, setPrevOpen] = useState(open);
+  const [prevUserId, setPrevUserId] = useState(userId);
+
+  if (open !== prevOpen || userId !== prevUserId) {
+    setPrevOpen(open);
+    setPrevUserId(userId);
     if (open && userId) {
       setLoading(true);
       setError(null);
+      setLogs([]);
+    }
+  }
+
+  useEffect(() => {
+    if (open && userId) {
       getUserDeliveryLogs(userId)
         .then((res) => {
           if (res.error) {
