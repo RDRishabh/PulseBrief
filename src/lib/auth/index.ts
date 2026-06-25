@@ -6,6 +6,15 @@ import { db, admins } from "@/lib/db";
 import { loginSchema } from "@/lib/validations";
 import { authConfig } from "./auth.config";
 
+if (process.env.NODE_ENV === "production") {
+  if (process.env.AUTH_URL?.includes("localhost")) {
+    delete process.env.AUTH_URL;
+  }
+  if (process.env.NEXTAUTH_URL?.includes("localhost")) {
+    delete process.env.NEXTAUTH_URL;
+  }
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
   providers: [
