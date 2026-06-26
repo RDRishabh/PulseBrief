@@ -3,11 +3,14 @@
 import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Plus, Pencil, Trash2, Loader2, Upload, ArrowLeft, ArrowUpDown, Calendar, MessageSquare, AlertCircle } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, Upload, ArrowLeft, ArrowUpDown, Calendar, MessageSquare, AlertCircle, Send } from "lucide-react";
 import { toast } from "sonner";
 import type { User } from "@/lib/db/schema";
 import { deleteUser, bulkUploadUsers } from "@/actions/users";
 import { getUserDeliveryLogs } from "@/actions/delivery-logs";
+import { Checkbox } from "@/components/ui/checkbox";
+import { triggerSelectedBriefings } from "@/actions/briefing";
+import { DeleteConfirmDialog } from "@/components/dashboard/delete-confirm-dialog";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { SearchInput } from "@/components/dashboard/search-input";
 import { Pagination } from "@/components/dashboard/pagination";
@@ -64,6 +67,18 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
 
+  // Delete confirm dialog states
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Single-user sending state
+  const [sendingUserId, setSendingUserId] = useState<string | null>(null);
+
+  // Multi-select for sending briefings
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [isSending, setIsSending] = useState(false);
+
   // Detail view logs
   const [logs, setLogs] = useState<LogItem[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
@@ -116,17 +131,31 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
     }
   }, [selectedUserId]);
 
-  async function handleDelete(id: string, name: string) {
-    if (!confirm(`Delete user "${name}"?`)) return;
-    const result = await deleteUser(id);
-    if (result.error) {
-      toast.error(result.error);
-    } else {
-      toast.success("User deleted");
-      if (selectedUserId === id) {
-        setSelectedUserId(null);
+  async function handleDeleteClick(id: string, name: string) {
+    setUserToDelete({ id, name });
+    setDeleteConfirmOpen(true);
+  }
+
+  async function handleConfirmDelete() {
+    if (!userToDelete) return;
+    setIsDeleting(true);
+    try {
+      const result = await deleteUser(userToDelete.id);
+      if (result.error) {
+        toast.error(result.error);
+      } else {
+        toast.success("User deleted");
+        if (selectedUserId === userToDelete.id) {
+          setSelectedUserId(null);
+        }
+        setUserToDelete(null);
+        router.refresh();
       }
-      router.refresh();
+    } catch (err: any) {
+      toast.error(err.message || "An error occurred.");
+    } finally {
+      setIsDeleting(false);
+      setDeleteConfirmOpen(false);
     }
   }
 
@@ -172,6 +201,65 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
     setCurrentPage(1);
   }
 
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const visibleIds = paginatedUsers.map((u) => u.id);
+      setSelectedUserIds((prev) => Array.from(new Set([...prev, ...visibleIds])));
+    } else {
+      const visibleIds = paginatedUsers.map((u) => u.id);
+      setSelectedUserIds((prev) => prev.filter((id) => !visibleIds.includes(id)));
+    }
+  };
+
+  const handleSelectRow = (userId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedUserIds((prev) => [...prev, userId]);
+    } else {
+      setSelectedUserIds((prev) => prev.filter((id) => id !== userId));
+    }
+  };
+
+  const handleSendWhatsApp = async () => {
+    if (selectedUserIds.length === 0) return;
+    setIsSending(true);
+    const toastId = toast.loading(`Sending manual briefings to ${selectedUserIds.length} users...`);
+    try {
+      const res = await triggerSelectedBriefings(selectedUserIds);
+      if (res.error) {
+        toast.error(res.error, { id: toastId });
+      } else {
+        toast.success(
+          `Briefings completed: ${res.successCount} sent successfully, ${res.failureCount} failed.`,
+          { id: toastId }
+        );
+        setSelectedUserIds([]);
+        router.refresh();
+      }
+    } catch (err: any) {
+      toast.error(err.message || "An error occurred.", { id: toastId });
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleSendSingleWhatsApp = async (userId: string, userName: string) => {
+    setSendingUserId(userId);
+    const toastId = toast.loading(`Sending manual briefing to ${userName}...`);
+    try {
+      const res = await triggerSelectedBriefings([userId]);
+      if (res.error) {
+        toast.error(res.error, { id: toastId });
+      } else {
+        toast.success(`Briefing sent successfully to ${userName}.`, { id: toastId });
+        router.refresh();
+      }
+    } catch (err: any) {
+      toast.error(err.message || "An error occurred.", { id: toastId });
+    } finally {
+      setSendingUserId(null);
+    }
+  };
+
   const selectedUser = allUsers.find((u) => u.id === selectedUserId);
 
   if (selectedUser) {
@@ -195,6 +283,20 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
             <Button
               variant="outline"
               size="sm"
+              className="gap-1.5 border-emerald-500/30 hover:bg-emerald-50 hover:dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400"
+              onClick={() => handleSendSingleWhatsApp(selectedUser.id, selectedUser.name)}
+              disabled={sendingUserId !== null}
+            >
+              {sendingUserId === selectedUser.id ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+              Send Briefing
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               className="gap-1.5"
               onClick={() => {
                 setEditingUser(selectedUser);
@@ -208,7 +310,7 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
               variant="destructive"
               size="sm"
               className="gap-1.5"
-              onClick={() => handleDelete(selectedUser.id, selectedUser.name)}
+              onClick={() => handleDeleteClick(selectedUser.id, selectedUser.name)}
             >
               <Trash2 className="h-4 w-4" />
               Delete
@@ -351,6 +453,14 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
           onOpenChange={setDialogOpen}
           user={editingUser}
         />
+        <DeleteConfirmDialog
+          open={deleteConfirmOpen}
+          onOpenChange={setDeleteConfirmOpen}
+          onConfirm={handleConfirmDelete}
+          title="Delete User"
+          description={`Are you sure you want to delete user "${userToDelete?.name}"? This action cannot be undone.`}
+          loading={isDeleting}
+        />
       </DashboardShell>
     );
   }
@@ -399,6 +509,20 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
           </Select>
         </div>
         <div className="flex gap-2">
+          {selectedUserIds.length > 0 && (
+            <Button
+              onClick={handleSendWhatsApp}
+              disabled={isSending}
+              className="bg-emerald-600 dark:bg-emerald-500 hover:bg-emerald-700 hover:dark:bg-emerald-600 text-white gap-2 font-medium shadow-sm transition-all"
+            >
+              {isSending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <MessageSquare className="h-4 w-4" />
+              )}
+              {isSending ? "Sending..." : `Send WhatsApp (${selectedUserIds.length})`}
+            </Button>
+          )}
           <Button
             variant="outline"
             onClick={() => setBulkDialogOpen(true)}
@@ -431,6 +555,16 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-[50px]">
+                <Checkbox
+                  checked={
+                    paginatedUsers.length > 0 &&
+                    paginatedUsers.every((user) => selectedUserIds.includes(user.id))
+                  }
+                  onCheckedChange={(checked) => handleSelectAll(!!checked)}
+                  aria-label="Select all"
+                />
+              </TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Phone</TableHead>
               <TableHead>City</TableHead>
@@ -443,13 +577,20 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
           <TableBody>
             {paginatedUsers.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground">
+                <TableCell colSpan={8} className="text-center text-muted-foreground">
                   No users found
                 </TableCell>
               </TableRow>
             ) : (
               paginatedUsers.map((user) => (
                 <TableRow key={user.id}>
+                  <TableCell>
+                    <Checkbox
+                      checked={selectedUserIds.includes(user.id)}
+                      onCheckedChange={(checked) => handleSelectRow(user.id, !!checked)}
+                      aria-label={`Select ${user.name}`}
+                    />
+                  </TableCell>
                   <TableCell className="font-medium">
                     <span
                       onClick={() => setSelectedUserId(user.id)}
@@ -474,6 +615,19 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
                       <Button
                         variant="ghost"
                         size="icon"
+                        onClick={() => handleSendSingleWhatsApp(user.id, user.name)}
+                        disabled={sendingUserId !== null}
+                        title="Send WhatsApp Briefing"
+                      >
+                        {sendingUserId === user.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin text-emerald-500" />
+                        ) : (
+                          <Send className="h-4 w-4 text-emerald-600 dark:text-emerald-500" />
+                        )}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={() => {
                           setEditingUser(user);
                           setDialogOpen(true);
@@ -484,7 +638,7 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => handleDelete(user.id, user.name)}
+                        onClick={() => handleDeleteClick(user.id, user.name)}
                       >
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
@@ -515,6 +669,15 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
         onOpenChange={setBulkDialogOpen}
         type="users"
         onUpload={bulkUploadUsers}
+      />
+
+      <DeleteConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        onConfirm={handleConfirmDelete}
+        title="Delete User"
+        description={`Are you sure you want to delete user "${userToDelete?.name}"? This action cannot be undone.`}
+        loading={isDeleting}
       />
     </DashboardShell>
   );

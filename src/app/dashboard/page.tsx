@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/table";
 import { getDashboardStats } from "@/actions/dashboard";
 import { formatDate } from "@/lib/utils";
+import { RunBriefingButton } from "@/components/dashboard/run-briefing-button";
 
 export default async function DashboardPage() {
   const stats = await getDashboardStats();
@@ -137,6 +138,9 @@ export default async function DashboardPage() {
               <p className="text-xs text-muted-foreground">
                 Cron runs daily at 1:30 AM UTC (7:00 AM IST) via Vercel Cron.
               </p>
+            </div>
+            <div className="border-t border-border/50 pt-4 mt-2">
+              <RunBriefingButton />
             </div>
           </CardContent>
         </Card>

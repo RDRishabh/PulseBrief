@@ -7,6 +7,7 @@ import { Plus, Pencil, Trash2, Loader2, Upload, ArrowLeft, ArrowUpDown } from "l
 import { toast } from "sonner";
 import type { Quote } from "@/lib/db/schema";
 import { deleteQuote, bulkUploadQuotes } from "@/actions/quotes";
+import { DeleteConfirmDialog } from "@/components/dashboard/delete-confirm-dialog";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { SearchInput } from "@/components/dashboard/search-input";
 import { Pagination } from "@/components/dashboard/pagination";
@@ -54,6 +55,11 @@ export function QuotesTable({ initialQuotes }: QuotesTableProps) {
   const [editingQuote, setEditingQuote] = useState<Quote | null>(null);
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
 
+  // Delete confirm dialog states
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [quoteToDeleteId, setQuoteToDeleteId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   // Synchronize state with initial props when revalidated
   const [prevInitialQuotes, setPrevInitialQuotes] = useState<Quote[]>(initialQuotes);
   if (initialQuotes !== prevInitialQuotes) {
@@ -61,17 +67,31 @@ export function QuotesTable({ initialQuotes }: QuotesTableProps) {
     setAllQuotes(initialQuotes);
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm("Delete this quote?")) return;
-    const result = await deleteQuote(id);
-    if (result.error) {
-      toast.error(result.error);
-    } else {
-      toast.success("Quote deleted");
-      if (selectedQuoteId === id) {
-        setSelectedQuoteId(null);
+  async function handleDeleteClick(id: string) {
+    setQuoteToDeleteId(id);
+    setDeleteConfirmOpen(true);
+  }
+
+  async function handleConfirmDelete() {
+    if (!quoteToDeleteId) return;
+    setIsDeleting(true);
+    try {
+      const result = await deleteQuote(quoteToDeleteId);
+      if (result.error) {
+        toast.error(result.error);
+      } else {
+        toast.success("Quote deleted");
+        if (selectedQuoteId === quoteToDeleteId) {
+          setSelectedQuoteId(null);
+        }
+        setQuoteToDeleteId(null);
+        router.refresh();
       }
-      router.refresh();
+    } catch (err: any) {
+      toast.error(err.message || "An error occurred.");
+    } finally {
+      setIsDeleting(false);
+      setDeleteConfirmOpen(false);
     }
   }
 
@@ -151,7 +171,7 @@ export function QuotesTable({ initialQuotes }: QuotesTableProps) {
               variant="destructive"
               size="sm"
               className="gap-1.5"
-              onClick={() => handleDelete(selectedQuote.id)}
+              onClick={() => handleDeleteClick(selectedQuote.id)}
             >
               <Trash2 className="h-4 w-4" />
               Delete
@@ -199,6 +219,14 @@ export function QuotesTable({ initialQuotes }: QuotesTableProps) {
           open={dialogOpen}
           onOpenChange={setDialogOpen}
           quote={editingQuote}
+        />
+        <DeleteConfirmDialog
+          open={deleteConfirmOpen}
+          onOpenChange={setDeleteConfirmOpen}
+          onConfirm={handleConfirmDelete}
+          title="Delete Quote"
+          description="Are you sure you want to delete this quote? This action cannot be undone."
+          loading={isDeleting}
         />
       </DashboardShell>
     );
@@ -336,7 +364,7 @@ export function QuotesTable({ initialQuotes }: QuotesTableProps) {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => handleDelete(quote.id)}
+                        onClick={() => handleDeleteClick(quote.id)}
                       >
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
@@ -367,6 +395,15 @@ export function QuotesTable({ initialQuotes }: QuotesTableProps) {
         onOpenChange={setBulkDialogOpen}
         type="quotes"
         onUpload={bulkUploadQuotes}
+      />
+
+      <DeleteConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        onConfirm={handleConfirmDelete}
+        title="Delete Quote"
+        description="Are you sure you want to delete this quote? This action cannot be undone."
+        loading={isDeleting}
       />
     </DashboardShell>
   );
