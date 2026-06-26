@@ -13,7 +13,7 @@ export async function fetchSensex(): Promise<SensexData> {
       if (res.ok) {
         const data = await res.json();
         const quote = data["Global Quote"];
-        if (quote) {
+        if (quote && quote["05. price"]) {
           const value = parseFloat(quote["05. price"]);
           const change = parseFloat(quote["09. change"]);
           const changePercent = parseFloat(
