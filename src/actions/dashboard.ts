@@ -42,9 +42,17 @@ export async function getDashboardStats() {
       .select({
         id: deliveryLogs.id,
         status: deliveryLogs.status,
+        messageContent: deliveryLogs.messageContent,
+        errorMessage: deliveryLogs.errorMessage,
+        whatsappMessageId: deliveryLogs.whatsappMessageId,
+        weatherData: deliveryLogs.weatherData,
+        goldData: deliveryLogs.goldData,
+        sensexData: deliveryLogs.sensexData,
+        horoscopeData: deliveryLogs.horoscopeData,
         sentAt: deliveryLogs.sentAt,
         createdAt: deliveryLogs.createdAt,
         userName: users.name,
+        userPhone: users.phone,
         userId: users.id,
       })
       .from(deliveryLogs)

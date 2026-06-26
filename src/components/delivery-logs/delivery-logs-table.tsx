@@ -3,7 +3,8 @@
 import { useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
-import { Loader2 } from "lucide-react";
+import { Loader2, Eye } from "lucide-react";
+import { DeliveryLogDetailDialog } from "./delivery-log-detail-dialog";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { SearchInput } from "@/components/dashboard/search-input";
 import { Pagination } from "@/components/dashboard/pagination";
@@ -60,6 +61,10 @@ export function DeliveryLogsTable({
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
   const [search, setSearch] = useState(initialSearch);
+
+  // Dialog state
+  const [selectedLog, setSelectedLog] = useState<any | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
 
   function updateParams(updates: Record<string, string>) {
     const params = new URLSearchParams(searchParams.toString());
@@ -125,12 +130,13 @@ export function DeliveryLogsTable({
               <TableHead>Message ID</TableHead>
               <TableHead>Sent At</TableHead>
               <TableHead>Error</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {logs.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground">
+                <TableCell colSpan={7} className="text-center text-muted-foreground">
                   No delivery logs found
                 </TableCell>
               </TableRow>
@@ -161,6 +167,19 @@ export function DeliveryLogsTable({
                   <TableCell className="max-w-[200px] truncate text-destructive">
                     {log.errorMessage ?? "—"}
                   </TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        setSelectedLog(log);
+                        setDetailOpen(true);
+                      }}
+                      title="View Details"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))
             )}
@@ -172,6 +191,12 @@ export function DeliveryLogsTable({
           onPageChange={(p) => updateParams({ page: String(p) })}
         />
       </motion.div>
+
+      <DeliveryLogDetailDialog
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        log={selectedLog}
+      />
     </DashboardShell>
   );
 }

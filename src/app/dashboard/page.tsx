@@ -1,20 +1,10 @@
 import { AlertTriangle } from "lucide-react";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { StatCard } from "@/components/dashboard/stat-card";
-import { UserHistoryTrigger } from "@/components/dashboard/user-history-trigger";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { getDashboardStats } from "@/actions/dashboard";
-import { formatDate } from "@/lib/utils";
 import { RunBriefingButton } from "@/components/dashboard/run-briefing-button";
+import { RecentDeliveries } from "@/components/dashboard/recent-deliveries";
 
 export default async function DashboardPage() {
   const stats = await getDashboardStats();
@@ -53,57 +43,7 @@ export default async function DashboardPage() {
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
-        <Card className="border-border/50 lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Recent Deliveries</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>User</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Date</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {stats.recentLogs.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={3} className="text-center text-muted-foreground">
-                      No deliveries yet
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  stats.recentLogs.map((log) => (
-                    <TableRow key={log.id}>
-                      <TableCell className="font-medium">
-                        <UserHistoryTrigger userId={log.userId} userName={log.userName}>
-                          {log.userName}
-                        </UserHistoryTrigger>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            log.status === "sent"
-                              ? "success"
-                              : log.status === "failed"
-                                ? "destructive"
-                                : "warning"
-                          }
-                        >
-                          {log.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {formatDate(log.sentAt ?? log.createdAt)}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+        <RecentDeliveries recentLogs={stats.recentLogs} />
 
         <Card className="border-border/50">
           <CardHeader>
