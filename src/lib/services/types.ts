@@ -47,4 +47,16 @@ export interface WhatsAppSendResult {
   success: boolean;
   messageId?: string;
   error?: string;
+  /** Meta numeric error code (e.g. 131030) */
+  metaErrorCode?: number;
+  /** Meta error type string (e.g. OAuthException) */
+  metaErrorType?: string;
+  /** Meta error sub-code */
+  metaErrorSubcode?: number;
+  /** HTTP status code from Meta API */
+  apiHttpStatus?: number;
+  /** Full raw API request + response body */
+  rawApiResponse?: Record<string, unknown>;
+  /** Formatted phone number that was actually sent to */
+  formattedPhone?: string;
 }

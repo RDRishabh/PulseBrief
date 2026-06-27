@@ -39,6 +39,15 @@ export async function getDeliveryLogs(params: {
         whatsappMessageId: deliveryLogs.whatsappMessageId,
         sentAt: deliveryLogs.sentAt,
         createdAt: deliveryLogs.createdAt,
+        // Rich Meta error fields
+        metaErrorCode: deliveryLogs.metaErrorCode,
+        metaErrorType: deliveryLogs.metaErrorType,
+        metaErrorSubcode: deliveryLogs.metaErrorSubcode,
+        apiHttpStatus: deliveryLogs.apiHttpStatus,
+        rawApiResponse: deliveryLogs.rawApiResponse,
+        deliveredAt: deliveryLogs.deliveredAt,
+        readAt: deliveryLogs.readAt,
+        webhookFailedReason: deliveryLogs.webhookFailedReason,
         userName: users.name,
         userPhone: users.phone,
       })
@@ -82,6 +91,13 @@ export async function getUserDeliveryLogs(userId: string) {
         whatsappMessageId: deliveryLogs.whatsappMessageId,
         sentAt: deliveryLogs.sentAt,
         createdAt: deliveryLogs.createdAt,
+        // Rich Meta error fields
+        metaErrorCode: deliveryLogs.metaErrorCode,
+        metaErrorType: deliveryLogs.metaErrorType,
+        apiHttpStatus: deliveryLogs.apiHttpStatus,
+        deliveredAt: deliveryLogs.deliveredAt,
+        readAt: deliveryLogs.readAt,
+        webhookFailedReason: deliveryLogs.webhookFailedReason,
       })
       .from(deliveryLogs)
       .where(eq(deliveryLogs.userId, userId))

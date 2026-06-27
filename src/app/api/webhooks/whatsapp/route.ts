@@ -57,7 +57,6 @@ export async function POST(request: NextRequest) {
     const payload = JSON.parse(rawBody);
     console.log("[WhatsApp Webhook Received Payload]:", JSON.stringify(payload, null, 2));
 
-    // Meta Webhook status payload structure parsing
     const entries = payload.entry ?? [];
     for (const entry of entries) {
       const changes = entry.changes ?? [];
@@ -66,67 +65,92 @@ export async function POST(request: NextRequest) {
         const statuses = value.statuses ?? [];
 
         for (const statusObj of statuses) {
-          const messageId = statusObj.id;
-          const status = statusObj.status; // "sent" | "delivered" | "read" | "failed"
+          const messageId = statusObj.id as string | undefined;
+          const status = statusObj.status as string | undefined; // "sent" | "delivered" | "read" | "failed"
+          const timestamp = statusObj.timestamp
+            ? new Date(Number(statusObj.timestamp) * 1000)
+            : new Date();
 
           if (!messageId || !status) continue;
 
-          // Resolve error message if failure occurred
-          const errorMsg =
-            statusObj.errors?.[0]?.message ??
-            statusObj.errors?.[0]?.title ??
-            "Unknown delivery failure";
+          // Extract full error detail from webhook failure payload
+          const webhookError = statusObj.errors?.[0];
+          const webhookFailedReason: string | null = webhookError
+            ? (webhookError.error_data?.details ??
+               webhookError.error_user_msg ??
+               webhookError.message ??
+               webhookError.title ??
+               "Unknown delivery failure")
+            : null;
+          const webhookMetaCode: number | null = webhookError?.code ?? null;
+          const webhookMetaType: string | null = webhookError?.type ?? null;
+          const webhookMetaSubcode: number | null = webhookError?.error_subcode ?? null;
 
-          // Fetch current log to verify state progression
+          // Find the existing log entry for this WhatsApp message ID
           const [existingLog] = await db
-            .select({ status: deliveryLogs.status })
+            .select({
+              id: deliveryLogs.id,
+              status: deliveryLogs.status,
+            })
             .from(deliveryLogs)
             .where(eq(deliveryLogs.whatsappMessageId, messageId))
             .limit(1);
 
-          if (existingLog) {
-            const statusPriority: Record<string, number> = {
-              pending: 0,
-              sent: 1,
-              delivered: 2,
-              read: 3,
-              failed: 4, // Failed status is treated as terminal
-            };
-
-            const currentPriority = statusPriority[existingLog.status] ?? 0;
-            const newPriority = statusPriority[status] ?? 0;
-
-            // Only update if it is a failure or represents forward progression (no downgrades)
-            if (status === "failed" || newPriority > currentPriority) {
-              const updateData: any = { status };
-
-              if (status === "failed") {
-                updateData.errorMessage = errorMsg;
-              } else {
-                updateData.errorMessage = null; // Clear any previous errors if it succeeded
-              }
-
-              // Update sentAt if it's not already logged
-              if (status === "sent" || status === "delivered" || status === "read") {
-                updateData.sentAt = new Date();
-              }
-
-              console.log(
-                `[WhatsApp Webhook] Updating message ${messageId}: ${existingLog.status} -> ${status}`
-              );
-
-              await db
-                .update(deliveryLogs)
-                .set(updateData)
-                .where(eq(deliveryLogs.whatsappMessageId, messageId));
-            } else {
-              console.log(
-                `[WhatsApp Webhook] Ignored out-of-order status downgrade for message ${messageId}: current=${existingLog.status}, received=${status}`
-              );
-            }
-          } else {
-            console.log(`[WhatsApp Webhook] Message ID ${messageId} not found in database.`);
+          if (!existingLog) {
+            console.log(`[WhatsApp Webhook] Message ID ${messageId} not found in database — skipping.`);
+            continue;
           }
+
+          const statusPriority: Record<string, number> = {
+            pending: 0,
+            sent: 1,
+            delivered: 2,
+            read: 3,
+            failed: 99, // failed is terminal — always allow
+          };
+
+          const currentPriority = statusPriority[existingLog.status] ?? 0;
+          const newPriority = statusPriority[status] ?? 0;
+
+          if (status !== "failed" && newPriority <= currentPriority) {
+            console.log(
+              `[WhatsApp Webhook] Ignored out-of-order status for ${messageId}: current=${existingLog.status}, received=${status}`
+            );
+            continue;
+          }
+
+          // Build the update payload based on the incoming status
+          const updateData: Record<string, unknown> = { status };
+
+          if (status === "delivered") {
+            updateData.deliveredAt = timestamp;
+            updateData.errorMessage = null;
+            updateData.webhookFailedReason = null;
+          } else if (status === "read") {
+            updateData.readAt = timestamp;
+            updateData.deliveredAt = existingLog.status === "delivered" ? undefined : timestamp;
+            updateData.errorMessage = null;
+            updateData.webhookFailedReason = null;
+          } else if (status === "failed") {
+            updateData.webhookFailedReason = webhookFailedReason;
+            updateData.errorMessage = webhookFailedReason ?? "Async delivery failure (webhook)";
+            if (webhookMetaCode) updateData.metaErrorCode = webhookMetaCode;
+            if (webhookMetaType) updateData.metaErrorType = webhookMetaType;
+            if (webhookMetaSubcode) updateData.metaErrorSubcode = webhookMetaSubcode;
+          } else if (status === "sent") {
+            updateData.sentAt = timestamp;
+          }
+
+          console.log(
+            `[WhatsApp Webhook] Updating message ${messageId}: ${existingLog.status} → ${status}` +
+            (webhookMetaCode ? ` | Code: ${webhookMetaCode}` : "") +
+            (webhookFailedReason ? ` | Reason: ${webhookFailedReason}` : "")
+          );
+
+          await db
+            .update(deliveryLogs)
+            .set(updateData as any)
+            .where(eq(deliveryLogs.id, existingLog.id));
         }
       }
     }

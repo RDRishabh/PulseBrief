@@ -93,6 +93,12 @@ export async function sendDailyBriefingToUser(
           sensexData: sensex,
           horoscopeData: horoscope,
           quoteId: quote.id,
+          // Rich Meta error detail
+          metaErrorCode: whatsappResult.metaErrorCode ?? null,
+          metaErrorType: whatsappResult.metaErrorType ?? null,
+          metaErrorSubcode: whatsappResult.metaErrorSubcode ?? null,
+          apiHttpStatus: whatsappResult.apiHttpStatus ?? null,
+          rawApiResponse: whatsappResult.rawApiResponse ?? null,
         })
         .where(eq(deliveryLogs.id, log.id));
 
@@ -117,6 +123,8 @@ export async function sendDailyBriefingToUser(
         quoteId: quote.id,
         whatsappMessageId: whatsappResult.messageId,
         sentAt: new Date(),
+        apiHttpStatus: whatsappResult.apiHttpStatus ?? null,
+        rawApiResponse: whatsappResult.rawApiResponse ?? null,
       })
       .where(eq(deliveryLogs.id, log.id));
 
@@ -126,6 +134,7 @@ export async function sendDailyBriefingToUser(
       success: true,
       logId: log.id,
     };
+
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error";

@@ -122,9 +122,20 @@ export const deliveryLogs = pgTable("delivery_logs", {
   goldData: jsonb("gold_data"),
   sensexData: jsonb("sensex_data"),
   horoscopeData: jsonb("horoscope_data"),
+  // ── Synchronous API error fields (populated at send time) ──
   errorMessage: text("error_message"),
+  metaErrorCode: integer("meta_error_code"),
+  metaErrorType: text("meta_error_type"),
+  metaErrorSubcode: integer("meta_error_subcode"),
+  apiHttpStatus: integer("api_http_status"),
+  rawApiResponse: jsonb("raw_api_response"),
+  // ── WhatsApp message tracking ──
   whatsappMessageId: text("whatsapp_message_id"),
   sentAt: timestamp("sent_at", { withTimezone: true }),
+  // ── Async webhook delivery fields (populated from Meta webhook callbacks) ──
+  deliveredAt: timestamp("delivered_at", { withTimezone: true }),
+  readAt: timestamp("read_at", { withTimezone: true }),
+  webhookFailedReason: text("webhook_failed_reason"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
