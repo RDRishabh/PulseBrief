@@ -16,7 +16,7 @@ export default async function DeliveryLogsPage({
   const result = await getDeliveryLogs({
     page: Number(params.page) || 1,
     search: params.search,
-    status: (params.status as "sent" | "failed" | "pending" | "all") || "all",
+    status: (params.status as "sent" | "failed" | "pending" | "delivered" | "read" | "all") || "all",
   });
 
   return (

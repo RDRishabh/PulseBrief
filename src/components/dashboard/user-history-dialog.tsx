@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Loader2, AlertTriangle, Calendar, MessageSquare, AlertCircle, CheckCircle } from "lucide-react";
+import { Loader2, AlertTriangle, Calendar, MessageSquare, AlertCircle, CheckCircle, Check, CheckCheck, Clock } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -14,7 +14,7 @@ import { formatDate } from "@/lib/utils";
 
 interface LogItem {
   id: string;
-  status: "sent" | "failed" | "pending";
+  status: "pending" | "sent" | "delivered" | "read" | "failed";
   messageContent: string | null;
   errorMessage: string | null;
   whatsappMessageId: string | null;
@@ -57,7 +57,7 @@ export function UserHistoryDialog({ open, onOpenChange, userId, userName }: User
             // Map the logs to match the expected interface type
             const mapped = res.logs.map((log: any) => ({
               id: log.id,
-              status: log.status as "sent" | "failed" | "pending",
+              status: log.status as "pending" | "sent" | "delivered" | "read" | "failed",
               messageContent: log.messageContent,
               errorMessage: log.errorMessage,
               whatsappMessageId: log.whatsappMessageId,
@@ -115,24 +115,31 @@ export function UserHistoryDialog({ open, onOpenChange, userId, userName }: User
               <div className="space-y-6">
                 {logs.map((log) => {
                   const dateStr = formatDate(log.sentAt ?? log.createdAt);
-                  const isSent = log.status === "sent";
                   const isFailed = log.status === "failed";
 
                   return (
                     <div key={log.id} className="relative flex gap-4 pl-4">
-                      {/* Timeline dot */}
-                      <div className="relative z-10 flex h-5 w-5 shrink-0 items-center justify-center">
-                        {isSent ? (
-                          <div className="h-4.5 w-4.5 rounded-full bg-emerald-500/20 border border-emerald-500 flex items-center justify-center">
-                            <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                      {/* Timeline dot / status icon */}
+                      <div className="relative z-10 flex h-6 w-6 shrink-0 items-center justify-center">
+                        {log.status === "read" ? (
+                          <div className="h-5.5 w-5.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center" title="Read by user">
+                            <CheckCheck className="h-3 w-3 text-emerald-400" />
+                          </div>
+                        ) : log.status === "delivered" ? (
+                          <div className="h-5.5 w-5.5 rounded-full bg-sky-500/15 border border-sky-500/30 flex items-center justify-center" title="Delivered to device">
+                            <CheckCheck className="h-3 w-3 text-sky-400" />
+                          </div>
+                        ) : log.status === "sent" ? (
+                          <div className="h-5.5 w-5.5 rounded-full bg-muted border border-border flex items-center justify-center" title="Sent from system">
+                            <Check className="h-3 w-3 text-muted-foreground" />
                           </div>
                         ) : isFailed ? (
-                          <div className="h-4.5 w-4.5 rounded-full bg-destructive/20 border border-destructive flex items-center justify-center">
-                            <div className="h-2 w-2 rounded-full bg-destructive" />
+                          <div className="h-5.5 w-5.5 rounded-full bg-destructive/15 border border-destructive/30 flex items-center justify-center" title="Delivery failed">
+                            <AlertCircle className="h-3 w-3 text-destructive" />
                           </div>
                         ) : (
-                          <div className="h-4.5 w-4.5 rounded-full bg-amber-500/20 border border-amber-500 flex items-center justify-center">
-                            <div className="h-2 w-2 rounded-full bg-amber-500" />
+                          <div className="h-5.5 w-5.5 rounded-full bg-amber-500/15 border border-amber-500/30 flex items-center justify-center" title="Pending send">
+                            <Clock className="h-3 w-3 text-amber-500" />
                           </div>
                         )}
                       </div>
@@ -153,7 +160,15 @@ export function UserHistoryDialog({ open, onOpenChange, userId, userName }: User
                             )}
                             <Badge
                               variant={
-                                isSent ? "success" : isFailed ? "destructive" : "warning"
+                                log.status === "read"
+                                  ? "success"
+                                  : log.status === "delivered"
+                                    ? "default"
+                                    : log.status === "sent"
+                                      ? "secondary"
+                                      : log.status === "failed"
+                                        ? "destructive"
+                                        : "warning"
                               }
                               className="text-[10px] py-0 px-1.5"
                             >

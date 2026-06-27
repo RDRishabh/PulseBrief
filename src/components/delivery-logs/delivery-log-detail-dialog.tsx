@@ -10,7 +10,7 @@ interface DeliveryLogDetailDialogProps {
   onOpenChange: (open: boolean) => void;
   log: {
     id: string;
-    status: "pending" | "sent" | "failed";
+    status: "pending" | "sent" | "delivered" | "read" | "failed";
     messageContent: string | null;
     errorMessage: string | null;
     whatsappMessageId: string | null;
@@ -39,11 +39,15 @@ export function DeliveryLogDetailDialog({
           <div className="flex items-center gap-2 mb-1">
             <Badge
               variant={
-                log.status === "sent"
+                log.status === "read"
                   ? "success"
-                  : log.status === "failed"
-                    ? "destructive"
-                    : "warning"
+                  : log.status === "delivered"
+                    ? "default"
+                    : log.status === "sent"
+                      ? "secondary"
+                      : log.status === "failed"
+                        ? "destructive"
+                        : "warning"
               }
             >
               {capitalize(log.status)}

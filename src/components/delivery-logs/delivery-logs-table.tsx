@@ -29,7 +29,7 @@ import { formatDate } from "@/lib/utils";
 
 interface DeliveryLogRow {
   id: string;
-  status: "pending" | "sent" | "failed";
+  status: "pending" | "sent" | "delivered" | "read" | "failed";
   messageContent: string | null;
   errorMessage: string | null;
   whatsappMessageId: string | null;
@@ -105,6 +105,8 @@ export function DeliveryLogsTable({
           <SelectContent>
             <SelectItem value="all">All</SelectItem>
             <SelectItem value="sent">Sent</SelectItem>
+            <SelectItem value="delivered">Delivered</SelectItem>
+            <SelectItem value="read">Read</SelectItem>
             <SelectItem value="failed">Failed</SelectItem>
             <SelectItem value="pending">Pending</SelectItem>
           </SelectContent>
@@ -148,11 +150,15 @@ export function DeliveryLogsTable({
                   <TableCell>
                     <Badge
                       variant={
-                        log.status === "sent"
+                        log.status === "read"
                           ? "success"
-                          : log.status === "failed"
-                            ? "destructive"
-                            : "warning"
+                          : log.status === "delivered"
+                            ? "default"
+                            : log.status === "sent"
+                              ? "secondary"
+                              : log.status === "failed"
+                                ? "destructive"
+                                : "warning"
                       }
                     >
                       {log.status}

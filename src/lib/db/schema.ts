@@ -22,6 +22,8 @@ export const quoteCategoryEnum = pgEnum("quote_category", [
 export const deliveryStatusEnum = pgEnum("delivery_status", [
   "pending",
   "sent",
+  "delivered",
+  "read",
   "failed",
 ]);
 export const zodiacSignEnum = pgEnum("zodiac_sign", [

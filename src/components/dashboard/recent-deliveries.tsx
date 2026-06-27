@@ -64,11 +64,15 @@ export function RecentDeliveries({ recentLogs }: RecentDeliveriesProps) {
                     <TableCell>
                       <Badge
                         variant={
-                          log.status === "sent"
+                          log.status === "read"
                             ? "success"
-                            : log.status === "failed"
-                              ? "destructive"
-                              : "warning"
+                            : log.status === "delivered"
+                              ? "default"
+                              : log.status === "sent"
+                                ? "secondary"
+                                : log.status === "failed"
+                                  ? "destructive"
+                                  : "warning"
                         }
                       >
                         {log.status}

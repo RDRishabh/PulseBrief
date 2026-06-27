@@ -7,7 +7,7 @@ import { auth } from "@/lib/auth";
 export async function getDeliveryLogs(params: {
   page?: number;
   limit?: number;
-  status?: "sent" | "failed" | "pending" | "all";
+  status?: "sent" | "failed" | "pending" | "delivered" | "read" | "all";
   search?: string;
 }) {
   const session = await auth();

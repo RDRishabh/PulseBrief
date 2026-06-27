@@ -1,6 +1,6 @@
 "use server";
 
-import { eq, sql, desc, gte } from "drizzle-orm";
+import { eq, sql, desc, gte, inArray } from "drizzle-orm";
 import { db, users, quotes, deliveryLogs } from "@/lib/db";
 import { auth } from "@/lib/auth";
 
@@ -33,7 +33,7 @@ export async function getDashboardStats() {
     db
       .select({ count: sql<number>`count(*)::int` })
       .from(deliveryLogs)
-      .where(eq(deliveryLogs.status, "sent")),
+      .where(inArray(deliveryLogs.status, ["sent", "delivered", "read"])),
     db
       .select({ count: sql<number>`count(*)::int` })
       .from(deliveryLogs)
@@ -63,13 +63,13 @@ export async function getDashboardStats() {
       .select({ count: sql<number>`count(*)::int` })
       .from(deliveryLogs)
       .where(
-        sql`${deliveryLogs.status} = 'sent' AND ${deliveryLogs.sentAt} >= ${weekAgo.toISOString()}`
+        sql`${deliveryLogs.status} IN ('sent', 'delivered', 'read') AND ${deliveryLogs.sentAt} >= ${weekAgo.toISOString()}`
       ),
     db
       .select({ count: sql<number>`count(*)::int` })
       .from(deliveryLogs)
       .where(
-        sql`${deliveryLogs.status} = 'sent' AND ${deliveryLogs.sentAt} >= ${new Date(weekAgo.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()} AND ${deliveryLogs.sentAt} < ${weekAgo.toISOString()}`
+        sql`${deliveryLogs.status} IN ('sent', 'delivered', 'read') AND ${deliveryLogs.sentAt} >= ${new Date(weekAgo.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()} AND ${deliveryLogs.sentAt} < ${weekAgo.toISOString()}`
       ),
   ]);
 
